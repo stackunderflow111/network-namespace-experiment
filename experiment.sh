@@ -17,11 +17,18 @@ iptables -t nat -A POSTROUTING -s 192.168.15.0/24 ! -o bridge0 -j MASQUERADE
 sysctl -w net.ipv4.ip_forward=1
 ip netns exec red ping 8.8.8.8
 
-# publish port -- run server
-ip netns exec red python3 -m http.server 80 &
+# run server
+ip netns exec red python3 -m http.server 80
 
-# publish port -- different machine
+# different machine access -- add routing rule
+# run the following on the machine "guest"
+ip route add 192.168.15.0/24 via 172.16.1.4 dev enp0s8
+curl 192.168.15.2:80
+
+# different machine access -- publish port
 iptables -t nat -A PREROUTING -p tcp --dport 8080 -j DNAT --to-destination 192.168.15.2:80
+# run the following on the machine "guest"
+curl 172.16.1.4:8080
 
 # publish port -- localhost access
 iptables -t nat -A OUTPUT -p tcp --dport 8080 -j DNAT --to-destination 192.168.15.2:80
